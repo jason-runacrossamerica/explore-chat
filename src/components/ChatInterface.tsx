@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Dumbbell, X, Send } from 'lucide-react';
 import { useUserContext } from '@/hooks/useUserContext';
 import styles from './ChatInterface.module.css';
@@ -18,6 +18,16 @@ interface ChatInterfaceProps {
   className?: string;
   isFullPage?: boolean;
   onClose?: () => void;
+}
+
+interface ChatResponse {
+  response?: string;
+  fallbackResponse?: string;
+  timestamp?: string;
+}
+
+interface SuggestionsResponse {
+  suggestions?: string[];
 }
 
 export function ChatInterface({
@@ -45,14 +55,7 @@ export function ChatInterface({
     scrollToBottom();
   }, [messages]);
 
-  // Initialize chatbot when component mounts (for full page) or when opened (for popup)
-  useEffect(() => {
-    if (!isInitialized) {
-      initializeChatbot();
-    }
-  }, []);
-
-  const initializeChatbot = async () => {
+  const initializeChatbot = useCallback(async () => {
     setIsTyping(true);
     try {
       // Get personalized greeting
@@ -66,7 +69,7 @@ export function ChatInterface({
         })
       });
 
-      const greetingData = await greetingResponse.json();
+      const greetingData: ChatResponse = await greetingResponse.json();
 
       const greetingMessage: Message = {
         id: Date.now().toString(),
@@ -79,7 +82,7 @@ export function ChatInterface({
 
       // Get suggested questions
       const suggestionsResponse = await fetch(`/api/suggestions?userId=${userId}&projectId=${projectId}`);
-      const suggestionsData = await suggestionsResponse.json();
+      const suggestionsData: SuggestionsResponse = await suggestionsResponse.json();
       setSuggestions(suggestionsData.suggestions || []);
 
     } catch (error) {
@@ -95,7 +98,14 @@ export function ChatInterface({
       setIsTyping(false);
       setIsInitialized(true);
     }
-  };
+  }, [userId, projectId]);
+
+  // Initialize chatbot when component mounts (for full page) or when opened (for popup)
+  useEffect(() => {
+    if (!isInitialized) {
+      initializeChatbot();
+    }
+  }, [initializeChatbot, isInitialized]);
 
   const handleSendMessage = async (messageText?: string) => {
     const textToSend = messageText || inputText.trim();
@@ -131,7 +141,7 @@ export function ChatInterface({
         })
       });
 
-      const data = await response.json();
+      const data: ChatResponse = await response.json();
 
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),

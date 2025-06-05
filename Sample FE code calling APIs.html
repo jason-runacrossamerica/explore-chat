@@ -1,0 +1,708 @@
+here's some sample code calling the endpoints - 
+
+<script>
+
+// Near entry of your product, init Mixpanel
+mixpanel.init("99c051b2b7abce301ed8a76ec295d096", {
+    track_pageview: true,   // enable automatic pageview tracking
+  debug: true
+    });
+  // register "name" as a super property
+mixpanel.register({
+    'User ID': user_id
+});
+
+</script>
+<script>
+
+    function animateLoading() {
+        var page = document.getElementById('content');
+        page.style.display = "none";
+        page.insertAdjacentHTML('afterend', '<div id="load" class="loader" style="display: block"></div>');
+    }
+
+    async function fetchProjectParticipants(user_id, project_id) {
+        const response = await fetch(`https://runprod.cockpitmobile.com/projectparticipants?user_id=${user_id}&project_id=${project_id}`);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        return data[0];
+    }
+
+    async function fetchData() {
+        try {
+            const projectParticipant = await fetchProjectParticipants(user_id, project_id);
+            return projectParticipant;
+        } catch (error) {
+            console.error('Error:', error);
+            return null;
+        }
+    }
+
+    function decorateLinks(distancePref = '') {
+        for (var i = 0, l = document.links.length; i < l; i++) {
+            console.log("Checking link: " + document.links[i].href);
+            if (!document.links[i].href.includes("#") && !document.links[i].href.includes("mailto:")) {
+                document.links[i].setAttribute("onclick", "animateLoading();");
+
+                const linkUrl = new URL(document.links[i].href);
+                const currentParams = new URLSearchParams(linkUrl.search);
+
+                // Add existing search params from the current page
+                const pageParams = new URLSearchParams(window.location.search);
+                for (const [key, value] of pageParams.entries()) {
+                    currentParams.set(key, value);
+                }
+
+                // Add the unit_preference param
+                currentParams.set('unit_preference', distancePref);
+
+                // Update the link's href with the new query string
+                linkUrl.search = currentParams.toString();
+                document.links[i].href = linkUrl.toString();
+            }
+        }
+    }
+
+    // Fetch data immediately and store the result
+    let projectParticipantPromise = fetchData();
+
+    document.addEventListener("DOMContentLoaded", async function () {
+        const projectParticipant = await projectParticipantPromise;
+        if (projectParticipant) {
+            const distancePref = projectParticipant.project_goal_distance_units;
+            decorateLinks(distancePref);
+        } else {
+            decorateLinks();
+        }
+    });
+
+    // Select all <a> elements with a data-onclick attribute
+    const onclicks = document.querySelectorAll('[data-onclick]');
+
+    // Iterate over each selected element
+    onclicks.forEach(onclick => {
+        // Move the value of the data-onclick attribute to the onclick attribute
+        onclick.setAttribute('onclick', onclick.getAttribute('data-onclick'));
+
+        // Remove the data-onclick attribute
+        onclick.removeAttribute('data-onclick');
+    });
+
+    // Select all elements with a data-onchange attribute
+    const onchanges = document.querySelectorAll('[data-onchange]');
+  
+  
+    // Iterate over each selected element
+    onchanges.forEach(onchange => {
+        // Move the value of the data-onclick attribute to the onclick attribute
+        onchange.setAttribute('onchange', onchange.getAttribute('data-onchange'));
+
+        // Remove the data-onclick attribute
+        onchange.removeAttribute('data-onchange');
+    });
+
+</script>
+
+
+<script src="https://cdn.shopify.com/s/files/1/0381/5679/6041/files/countUp.umd_1.js?v=1608176777"></script>
+<script>
+    async function fetchUserName(userId) {
+        const response = await fetch(`https://runprod.cockpitmobile.com/users/${userId}`);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        return data.first_name;
+    }
+
+
+    async function fetchChallenges(userId, projectId, projectParticipant) {
+        const hasCohort = projectParticipant.cohort_start_date && projectParticipant.cohort_end_date;
+        const url = hasCohort
+            ? `https://runprod.cockpitmobile.com/events/${projectId}/challenges/user/${userId}/dates`
+            : `https://runprod.cockpitmobile.com/events/${projectId}/challenges/user/${userId}?include_unlockable=t`;
+
+        const options = {
+            method: hasCohort ? 'POST' : 'GET',
+            headers: {
+                'Accept': 'application/json, text/plain, */*',
+                'Content-Type': 'application/json'
+            },
+            body: hasCohort ? JSON.stringify({
+                cohort_start_date: new Date(projectParticipant.cohort_start_date),
+                cohort_end_date: new Date(projectParticipant.cohort_end_date)
+            }) : null
+        };
+
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        return data;
+    }
+
+    async function fetchSeasonProgress(projectId, userId) {
+        const response = await fetch(`https://runprod.cockpitmobile.com/events/${projectId}/cumulative/distance/users/${userId}`, {
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not OK');
+        }
+
+        const data = await response.json();
+        return data.total_distance; // Return the relevant data for rendering
+    }
+
+    async function fetchStateLeaderboard(projectId) {
+        const response = await fetch(`https://runprod.cockpitmobile.com/events/${projectId}/cumulative/results/states?1`, {
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not OK');
+        }
+
+        const data = await response.json();
+        return data.event_results; // Return the relevant data for rendering
+    }
+
+    async function fetchCommunityTotal(projectId) {
+        const response = await fetch(`https://runprod.cockpitmobile.com/projects/${projectId}/community-total`);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        return data.total;
+    }
+
+
+
+    function setCommunityProgress(totalDistanceKm, distancePref) {
+    
+        const totalDistance = distancePref === "Miles" ? totalDistanceKm * 0.621371 : totalDistanceKm;
+        let communityGoal;
+        let units;
+        let progress;
+
+	    if(!{{wf {&quot;path&quot;:&quot;archive-mode&quot;,&quot;type&quot;:&quot;Bool&quot;\} }}) {
+                progress = document.getElementById('progress');
+                units = document.getElementById('units');
+                communityGoal = document.getElementById('communitygoal');
+        } else {
+                progress = document.getElementById('progress-archive');
+                units = document.getElementById('units-archive');
+                communityGoal = document.getElementById('communitygoal-archive');
+        }
+
+        progress.innerText = Math.round(totalDistance).toLocaleString('en-US');
+        progress.dataset.value = Math.round(totalDistance);
+        
+        units.innerText = distancePref;
+
+        const baseGoalMiles = parseFloat(communityGoal.dataset.goalMiles);
+        const goalDistance = distancePref === "Miles" ? baseGoalMiles : Math.round(baseGoalMiles / 0.621371 / 1000) * 1000;
+        communityGoal.innerText = Math.round(goalDistance).toLocaleString('en-US') + " " + distancePref;
+        communityGoal.dataset.goal = goalDistance;
+
+        let options = {
+            root: null,
+            rootMargin: '0px',
+        };
+
+        let observer = new IntersectionObserver(callbackFunc, options);
+        observer.observe(progress);
+    }
+
+
+    function animateProgressBar(progress, goal) {
+
+        let progressBar;
+
+	    if(!{{wf {&quot;path&quot;:&quot;archive-mode&quot;,&quot;type&quot;:&quot;Bool&quot;\} }}) {
+                progressBar = document.getElementById('progress-bar');
+        } else {
+                progressBar = document.getElementById('progress-bar-archive');
+        }
+
+        let width = 0;
+        const interval = setInterval(() => {
+            if (width >= (progress / goal) * 100) {
+                clearInterval(interval);
+            } else {
+                width++;
+                progressBar.style.width = width + '%';
+                progressBar.textContent = width + '%';
+            }
+        }, 10);
+    }
+
+    function callbackFunc(entries, observer) {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                console.log(entry.target);
+                let demo = new countUp.CountUp(entry.target, parseInt(entry.target.dataset.value), { duration: 2 });
+                if (!demo.error) {
+                    demo.start();
+                    let goal;
+                    if(!{{wf {&quot;path&quot;:&quot;archive-mode&quot;,&quot;type&quot;:&quot;Bool&quot;\} }}) {
+                        goal = parseFloat(document.getElementById('communitygoal').dataset.goal);
+                    } else {
+                        goal = parseFloat(document.getElementById('communitygoal-archive').dataset.goal);
+                    }
+                    animateProgressBar(Math.max(1, Math.round(parseInt(entry.target.dataset.value))), goal);
+                } else {
+                    console.error(demo.error);
+                }
+            }
+        });
+    }
+
+
+    async function main(userId, projectId, archiveMode) {
+        try {
+            const projectParticipant = await fetchProjectParticipants(userId, projectId);
+            const seasonProgress = await fetchSeasonProgress(projectId, userId);
+            const challenges = await fetchChallenges(userId, projectId, projectParticipant);
+            const totalDistanceKm = await fetchCommunityTotal(projectId);
+            const distancePref = projectParticipant.project_goal_distance_units;
+            const userName = await fetchUserName(userId);
+            if (totalDistanceKm > 0) {
+                const stateResults = await fetchStateLeaderboard(projectId);
+                setCommunityProgress(totalDistanceKm, distancePref);
+                setStateLeaderboard(stateResults, distancePref, projectId);
+            } else {
+                document.getElementById('leaderboard')?.style?.setProperty('display', 'none');
+            }
+            setGreeting(userName, projectParticipant, challenges.challenges_with_badges, seasonProgress, projectParticipant.project_goal_distance, distancePref);
+            if (challenges.challenges_with_badges && challenges.challenges_with_badges.length > 0) {
+                populateBonusChallenges(challenges.challenges_with_badges ? challenges.challenges_with_badges : []);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            setGreeting();
+        }
+    }
+    console.log(user_id);
+    // Check if user_id and project_id are defined before calling main
+    if (typeof user_id !== 'undefined' && user_id != null && typeof project_id !== 'undefined') {
+        main(user_id, project_id, {{wf {&quot;path&quot;:&quot;archive-mode&quot;,&quot;type&quot;:&quot;Bool&quot;\} }});
+    }
+    else {
+        setGreeting();
+    }
+
+    function getSeasonMessages(project) {
+        const today = new Date();
+        const cohortStart = new Date(project.cohort_start_date);
+        const cohortEnd = new Date(project.cohort_end_date);
+        const season = document.body.getAttribute('data-season-name');
+        const event = document.body.getAttribute('data-event-name');
+
+        const messages = [];
+
+        messages.push(`Feel the ${season} vibes`);
+
+        if (today < cohortStart) {
+            // Calculate days until the season starts
+            const daysUntilStart = Math.ceil((cohortStart - today) / (1000 * 60 * 60 * 24));
+            if (daysUntilStart === 1) {
+                messages.push(`Only 1 day until ${event} begins! 🚀`);
+            } else {
+                messages.push(`${daysUntilStart} days until ${event}!`);
+            }
+        } else if (today > cohortEnd) {
+            messages.push("Great job in ${season}");
+        } else {
+            // Within the season: Welcome message during the first 7 days
+            const daysSinceStart = Math.floor((today - cohortStart) / (1000 * 60 * 60 * 24));
+            if (daysSinceStart <= 7) {
+                messages.push(`${season} starts now`, "You're in the right place", "This is your season", `${season} vibes are here`);
+            }
+
+            // Last 7 days: Encourage finishing strong
+            const daysUntilEnd = Math.ceil((cohortEnd - today) / (1000 * 60 * 60 * 24));
+            if (daysUntilEnd <= 7) {
+                messages.push(`Time to finish ${season} strong`, "Last push toward your goal", `Let's finish ${event} strong`, `Nearly there for ${event}`);
+            }
+        }
+
+        return messages;
+    }
+
+    function getChallengeMessages(challenges) {
+        const now = new Date();
+        const fiveDaysFromNow = new Date(now);
+        const oneWeekFromNow = new Date(now);
+        fiveDaysFromNow.setDate(now.getDate() + 5);
+        oneWeekFromNow.setDate(now.getDate() + 7);
+        now.setDate(now.getDate());
+
+        return challenges.flatMap(challenge => {
+            const startDate = new Date(challenge.start_date);
+            const endDate = new Date(challenge.end_date);
+            endDate.setDate(endDate.getDate() - 1);
+
+            // Convert start and end dates to local time
+            const startDateLocal = new Date(startDate.toLocaleString("en-US", { timeZone: "America/Chicago" }));
+            const endDateLocal = new Date(endDate.toLocaleString("en-US", { timeZone: "America/Chicago" }));
+
+            // Get the day of the week for start and end dates
+            const startDay = startDateLocal.toLocaleDateString("en-US", { weekday: 'short' });
+            const endDay = endDateLocal.toLocaleDateString("en-US", { weekday: 'short' });
+
+            // Check if the challenge starts in the next 5 days or is currently open
+            const isUpcoming = startDateLocal >= now && startDateLocal <= fiveDaysFromNow;
+            const isOpen = startDateLocal <= now && endDateLocal >= now;
+            if (isOpen && challenge.has_result) {
+                return [`Nice job in ${challenge.title} 💪`];
+            } else if (isOpen && endDateLocal <= fiveDaysFromNow) {
+                return [`${challenge.title} open thru ${endDay}`];
+            } else if (isOpen) {
+                return [`${challenge.title} open now`];
+            } else if (isUpcoming) {
+                return [`${challenge.title} opens ${startDay}`];
+            }
+
+            return [];
+        });
+    }
+
+    function getGoalMessages(seasonProgress, seasonGoal, goalUnits) {
+        const messages = [];
+
+        // Convert progress to the same units as the goal
+        if (goalUnits === 'Miles') {
+            seasonProgress *= 1.60934; // Convert kilometers to miles
+        }
+
+        // Calculate the remaining progress needed to reach the goal
+        const remainingProgress = seasonGoal - seasonProgress;
+
+        // Determine the halfway point
+        const halfwayPoint = seasonGoal / 2;
+
+        if (remainingProgress > 0) {
+            // Still working towards the goal
+            if (seasonProgress === 0) {
+                messages.push(`Time to log your first activity`, `Let's start!`);
+            } else if (seasonProgress < 1 || seasonProgress < (seasonGoal * 0.3)) {
+                messages.push(`Off to a good start 🎉`, `Strong start 💪`);
+            }
+            if (seasonProgress <= halfwayPoint && seasonProgress < seasonGoal) {
+                // Check if within 3 miles (5 kilometers) of halfway
+                const distanceToHalfway = Math.abs(seasonProgress - halfwayPoint);
+                if (distanceToHalfway <= 3) {
+                    messages.push(`Almost halfway to your goal`);
+                }
+            }
+        }
+
+        return messages;
+    }
+
+
+
+    function populateBonusChallenges(resp_challenges) {
+
+        resp_challenges.sort((a, b) => {
+            return new Date(a.start_date).getTime() > new Date(b.start_date).getTime() ? 1 : -1;
+        });
+        var bonusEvents = document.getElementById('bonus_events');
+        var innerHTML = ``;
+        var firstOpenChallengeId = null;
+
+        for (let i = 0; i < resp_challenges.length; i++) {
+            var challenge = resp_challenges[i];
+            var isGrey = (challenge.challenge_is_unlockable && !challenge.challenge_unlocked_date) || (!challenge.challenge_is_unlockable && new Date(challenge.start_date).getTime() > new Date().getTime());
+
+            const startDate = new Date(challenge.start_date);
+            const endDate = new Date(challenge.end_date);
+            const options = { weekday: 'short', month: 'numeric', day: 'numeric' };
+            const endDateFormat = new Date(challenge.end_date);
+            endDateFormat.setDate(endDate.getDate() - 1); // Subtract one day from the end date for formatting
+            const formattedDates = `${startDate.toLocaleDateString('en-US', options)}—${endDateFormat.toLocaleDateString('en-US', options)}`;
+
+            if (isGrey) {
+                var buttonText = challenge.challenge_is_unlockable ? `Locked` : `Opens ` + (startDate.getMonth() + 1) + `/` + startDate.getDate();
+                innerHTML += `<a disable><img src="${challenge.grey_image_link}" /><br /><br /><b>` + challenge.challenge_extra_data.title_inactive + `</b><br />${formattedDates}<br />${challenge.challenge_extra_data.explore_description}<br /><span class="fallButton btn button-disabled" style="margin-bottom:10px;">${buttonText}</span></a>`;
+            } else {
+                var lockDate = challenge.challenge_unlocked_date;
+                if (lockDate) {
+                    lockDate = new Date(challenge.challenge_unlocked_date);
+                    lockDate.setDate(lockDate.getDate() + 14);
+                }
+                var isLeaderboard = challenge.has_result ||
+                    (!challenge.challenge_is_unlockable && new Date(challenge.end_date).getTime() < new Date().getTime()) ||
+                    (lockDate && lockDate.getTime() < new Date().getTime());
+                var isClosed = (challenge.challenge_type === 'activity' || challenge.challenge_type === 'timed' || challenge.challenge_type === 'streak') && isLeaderboard;
+                var aHTML = isClosed ? `<a>` : isLeaderboard ? `<a href="/challenge-leaderboard?project_url=` + window.location.pathname.replace(/\//g, '') + `
+&challenge_id=` + challenge.challenge_id + `&project_id=` + project_id + `&user_id=` + user_id + `" onclick="animateLoading()">` :
+                    `<a onclick="window.parent.postMessage('page Race challenge-` + challenge.challenge_id + `', '*')">`;
+
+                // Add ID to the first open challenge
+                if (!firstOpenChallengeId && !isClosed && !isLeaderboard) {
+                    firstOpenChallengeId = `open-challenge-${challenge.challenge_id}`;
+                    aHTML = `<a id="${firstOpenChallengeId}" onclick="window.parent.postMessage('page Race challenge-` + challenge.challenge_id + `', '*')">`;
+                }
+                innerHTML += aHTML + `<img src="` + challenge.image_link + `" /><br /><br /><b>` + challenge.title + `</b><br />${formattedDates}<br />${challenge.challenge_extra_data.explore_description}<br /><span class="fallButton btn button-primary" style="margin-bottom:10px;">` + (isClosed ? 'Closed' : isLeaderboard ? `View leaderboard` : `Log activity`) + `</span></a>`;
+            }
+        }
+        bonusEvents.innerHTML = innerHTML;
+        // Scroll the first open challenge into view horizontally
+        if (firstOpenChallengeId) {
+            var firstOpenChallengeElement = document.getElementById(firstOpenChallengeId);
+            bonusEvents.scrollTo({
+                left: firstOpenChallengeElement.offsetLeft - 30,
+                behavior: 'smooth'
+            });
+        }
+    }
+
+    function setGreeting(userName, project, challenges, seasonProgress, seasonGoal, goalUnits) {
+        // Get the current time
+        const now = new Date();
+        const hour = now.getHours();
+
+        // Initialize an array for greetings
+        const greetings = [];
+
+        if (challenges === undefined) {
+        }
+        else {
+            const challengeMessages = getChallengeMessages(challenges);
+            greetings.push(...challengeMessages);
+        }
+        
+        if (project === undefined || seasonProgress === undefined || seasonGoal === undefined || goalUnits === undefined || now < project.cohort_start_date) {
+        }
+        else {
+            const goalMessages = getGoalMessages(seasonProgress, seasonGoal, goalUnits);
+            greetings.push(...goalMessages);
+        }
+
+        if (project === undefined) {
+        }
+        else {
+            const projectMessages = getSeasonMessages(project);
+            greetings.push(...projectMessages);
+        }
+        if (userName === undefined) {
+        }
+        else {
+            // Add general greetings
+            greetings.push("You're amaz&shy;ing", `Nice to see you, ${userName}`, "Thrilled you're here", `Hello, ${userName}`);
+        }
+
+        // Add time-specific greetings based on the current time
+        if (hour >= 5 && hour < 12) {
+            greetings.push("Good morning", "Rise and shine", "Carpe diem");
+        } else if (hour >= 12 && hour < 18) {
+            greetings.push("Good after&shy;noon", "How's your day?", "Make the most of the after&shy;noon");
+        }
+
+        greetings.push("You're in the right place", "This is your season");
+
+        // Randomly select a greeting
+        const selectedGreeting = greetings[Math.floor(Math.random() * greetings.length)];
+
+        document.querySelector("#welcome > h1").innerHTML = selectedGreeting;
+    }
+
+
+    function setStateLeaderboard(stateResults, distancePref, project_id) {
+
+        // Assuming you have an HTML element with an ID like "results-container" to display the data
+        const resultsContainer = document.getElementById('results-container');
+
+        // State icons (replace with actual Stateface icons)
+        const stateIcons = {
+            AL: "B", AK: "A", AS: "", AZ: "D", AR: "C", CA: "E", CO: "F", CT: "G", DE: "H", DC: "y", FM: "", FL: "I", GA: "J", GU: "", HI: "K", ID: "M", IL: "N", IN: "O", IA: "L", KS: "P", KY: "Q", LA: "R", ME: "U", MH: "", MD: "T", MA: "S", MI: "V", MN: "W", MS: "Y", MO: "X", MT: "Z", NE: "c", NV: "g", NH: "d", NJ: "e", NM: "f", NY: "h", NC: "a", ND: "b", MP: "", OH: "i", OK: "j", OR: "k", PW: "", PA: "l", PR: "", RI: "m", SC: "n", SD: "o", TN: "p", TX: "q", UT: "r", VT: "t", VI: "", VA: "s", WA: "u", WV: "w", WI: "v", WY: "x"
+        };
+
+        // State dictionary (abbreviations to full names)
+        const stateNames = {
+            AL: "Alabama", AK: "Alaska", AS: "American Samoa", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District Of Columbia", FM: "Federated States Of Micronesia", FL: "Florida", GA: "Georgia", GU: "Guam", HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MH: "Marshall Islands", MD: "Maryland", MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", MP: "Northern Mariana Islands", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PW: "Palau", PA: "Pennsylvania", PR: "Puerto Rico", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont", VI: "Virgin Islands", VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming"
+        };
+        stateResults.sort((a, b) => {
+            return a.sum < b.sum ? 1 : -1;
+        });
+
+
+        // Create podium tiles
+        stateResults.slice(0, 3).forEach((result, index) => {
+            const stateName = stateNames[result.state];
+            const icon = stateIcons[result.state] || '';
+
+            let distanceFormatted;
+            if (distancePref === 'Miles') {
+                const distanceMiles = result.sum * 0.621371;
+                distanceFormatted = distanceMiles.toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                }) + ' mi';
+            } else {
+                distanceFormatted = result.sum.toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                }) + ' KM';
+            }
+
+            // Create the podium tile HTML
+            const tile = `
+        <div class="podium ${index === 0 ? 'first-place' : index === 1 ? 'second-place' : 'third-place'}">
+            <span class="state-icon">${icon}</span>
+            <div class="place-number">${index + 1}</div>
+            <div class="state-name">${stateName}</div>
+            <div class="distance">${distanceFormatted}</div>
+        </div>
+    `;
+
+            resultsContainer.insertAdjacentHTML('beforeend', tile);
+        });
+  if(!{{wf {&quot;path&quot;:&quot;archive-mode&quot;,&quot;type&quot;:&quot;Bool&quot;\} }}) {
+        resultsContainer.insertAdjacentHTML("beforebegin", '<h2 class="community-total" style="padding-bottom:10px">Current standings by state</h2>');
+        } else {
+        resultsContainer.insertAdjacentHTML("beforebegin", '<h2 class="community-total" style="padding-bottom:10px">Results by state</h2>');
+        }
+        resultsContainer.insertAdjacentHTML("afterend", `<a class="fallButton btn button-primary" onclick="animateLoading();" href="/state-leaderboard?project_id=${project_id}&user_id=${user_id}&unit_preference=${distancePref}">View full state leaderboard</a>`);
+    }
+</script>
+
+
+
+<script>
+    const collection = '{{wf {&quot;path&quot;:&quot;shopify-merch-collection&quot;,&quot;type&quot;:&quot;PlainText&quot;\} }}';
+    const endpoint = `https://nationwide-race.myshopify.com/collections/${collection}/products.json`;
+
+    async function fetchProducts() {
+        const response = await fetch(endpoint);
+        const data = await response.json();
+        return data.products;
+    }
+
+    function stripHtml(html) {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        return doc.body.textContent || "";
+    }
+
+    function formatPrice(price) {
+        return price.replace(/\.00$/, '');
+    }
+
+    function removeEventName(name) {
+        return name.replace(": {{wf {&quot;path&quot;:&quot;name&quot;,&quot;type&quot;:&quot;PlainText&quot;\} }}", '');
+    }
+
+    function displayProducts(products) {
+        const grid = document.querySelector('.container2');
+        products.sort(() => 0.5 - Math.random());
+        const selectedProducts = products.slice(0, 3);
+        selectedProducts.forEach(product => {
+            const item = document.createElement('div');
+            item.className = 'page merchItem';
+            item.style.backgroundImage = `url(${product.images[0].src})`;
+            item.style.backgroundRepeat = 'no-repeat';
+            item.style.backgroundSize = 'cover';
+            item.style.backgroundPosition = 'bottom center';
+            item.innerHTML = `
+                <div class="contentbox">
+                    <span class="label">FREE SHIPPING</span>
+                    <b>Merch shop: ${removeEventName(product.title)}</b>
+                    <span class="description">${stripHtml(product.body_html)}</span>
+                    <a onclick="window.parent.postMessage('url https://nationwiderun.org/products/${product.handle}?utm_source=redirect&utm_medium=app&utm_campaign=exploremerch', '*')" class="fallButton btn button-primary">View product • $${formatPrice(product.variants[0].price)}</a>
+                </div>`;
+            grid.appendChild(item);
+        });
+
+        // Add a page with general merch and auto-scrolling display
+        const item = document.createElement('div');
+        item.className = 'page';
+        item.style.backgroundImage = `url('{{wf {&quot;path&quot;:&quot;season-background-1&quot;,&quot;type&quot;:&quot;ImageRef&quot;\} }}')`;
+        item.style.backgroundRepeat = 'repeat';
+        item.style.backgroundSize = '750px';
+        item.style.paddingTop = '30vh'; // Shift content to start 30vh below the top
+        item.innerHTML = `
+           <h2 class="updates-h2 center" style="text-align:center;">There's even more in the merch shop</h2>
+                <p class="paragraph2 center" style="text-align:center;">Outfit your season with limited-edition items</p>
+                <a onclick="window.parent.postMessage('url https://nationwiderun.org/collections/merchandise?utm_source=redirect&utm_medium=app&utm_campaign=exploremerch', '*')" class="auto-scroll-link">
+                    <div class="auto-scroll-wrapper">
+                        <div class="auto-scroll-container">
+                            ${products.concat(products).map((product, index) => `
+                                <div class="auto-scroll-item">
+                                    <img src="${product.images[0].src}" alt="${product.title}" style="animation-delay: ${Math.random() * 2}s;">
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </a>
+                <a onclick="window.parent.postMessage('url https://nationwiderun.org/collections/merchandise?utm_source=redirect&utm_medium=app&utm_campaign=exploremerch', '*');console.log('test')" class="button-primary">View all merch</a>
+           `;
+        grid.appendChild(item);
+    }
+
+    // CSS for smooth auto-scrolling, independent rotation effect, and shadow
+    const style = document.createElement('style');
+    style.innerHTML = `
+.auto-scroll-wrapper {
+    overflow: hidden;
+    width: 100%;
+}
+.auto-scroll-container {
+    display: flex;
+    width: max-content;
+    animation: scroll 60s linear infinite; /* Increased duration for smoother scrolling */
+}
+.auto-scroll-item {
+    display: inline-block;
+    margin-right: 10px;
+}
+.auto-scroll-item img {
+    width: 30vw; /* Ensure each image is 30vw wide */
+    height: auto;
+    animation: rotate 6s infinite; /* Slow rotation */
+    filter: drop-shadow(0px 0px 2px rgba(0, 0, 0, 0.2)); /* Drop shadow */
+}
+@keyframes scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); } /* Adjusted to scroll half the width of the container */
+}
+@keyframes rotate {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-2deg); }
+    75% { transform: rotate(2deg); }
+}
+.auto-scroll-link {
+    display: block;
+    text-decoration: none;
+}
+`;
+    document.head.appendChild(style);
+
+    document.addEventListener('DOMContentLoaded', async function () {
+        if (collection) {
+            const products = await fetchProducts();
+            displayProducts(products);
+        }
+    });
+
+</script>
+<script>document.querySelector('.container2').addEventListener('scroll', function () {
+        const pages = document.querySelectorAll('.page');
+        pages.forEach(page => {
+            const rect = page.getBoundingClientRect();
+            if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
+                page.classList.add('active');
+            } else {
+                page.classList.remove('active');
+            }
+        });
+    })
+</script>

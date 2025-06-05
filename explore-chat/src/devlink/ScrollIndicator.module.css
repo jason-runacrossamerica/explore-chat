@@ -1,0 +1,17 @@
+.scroll-indicator {
+  position: absolute;
+  left: 50%;
+  top: 90vh;
+  transform: translate(-50%, 0px);
+  animation: bounce 2s infinite;
+}
+
+@media screen and (max-width: 479px) {
+  .scroll-indicator {
+    position: absolute;
+    left: 50%;
+    top: 90vh;
+    transform: translateX(-50%);
+    animation: bounce 2s infinite;
+  }
+}

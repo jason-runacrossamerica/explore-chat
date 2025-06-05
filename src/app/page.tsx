@@ -1,6 +1,6 @@
 "use client";
 
-import { Section, Block, Link } from "@/devlink/_Builtin";
+import { Section, Block } from "@/devlink/_Builtin";
 
 export default function Home() {
   return (

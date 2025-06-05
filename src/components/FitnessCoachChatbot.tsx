@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Dumbbell } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { X, Send, Dumbbell } from 'lucide-react';
 import { useUserContext } from '@/hooks/useUserContext';
 
 interface Message {
@@ -15,6 +15,16 @@ interface FitnessCoachChatbotProps {
   userId?: string;
   projectId?: string;
   className?: string;
+}
+
+interface ChatResponse {
+  response?: string;
+  fallbackResponse?: string;
+  timestamp?: string;
+}
+
+interface SuggestionsResponse {
+  suggestions?: string[];
 }
 
 export function FitnessCoachChatbot({
@@ -41,14 +51,7 @@ export function FitnessCoachChatbot({
     scrollToBottom();
   }, [messages]);
 
-  // Initialize chatbot when opened
-  useEffect(() => {
-    if (isOpen && !isInitialized) {
-      initializeChatbot();
-    }
-  }, [isOpen, isInitialized]);
-
-  const initializeChatbot = async () => {
+  const initializeChatbot = useCallback(async () => {
     setIsTyping(true);
     try {
       // Get personalized greeting
@@ -62,7 +65,7 @@ export function FitnessCoachChatbot({
         })
       });
 
-      const greetingData = await greetingResponse.json();
+      const greetingData: ChatResponse = await greetingResponse.json();
 
       const greetingMessage: Message = {
         id: Date.now().toString(),
@@ -75,7 +78,7 @@ export function FitnessCoachChatbot({
 
       // Get suggested questions
       const suggestionsResponse = await fetch(`/chat/api/suggestions?userId=${userId}&projectId=${projectId}`);
-      const suggestionsData = await suggestionsResponse.json();
+      const suggestionsData: SuggestionsResponse = await suggestionsResponse.json();
       setSuggestions(suggestionsData.suggestions || []);
 
     } catch (error) {
@@ -91,7 +94,14 @@ export function FitnessCoachChatbot({
       setIsTyping(false);
       setIsInitialized(true);
     }
-  };
+  }, [userId, projectId]);
+
+  // Initialize chatbot when opened
+  useEffect(() => {
+    if (isOpen && !isInitialized) {
+      initializeChatbot();
+    }
+  }, [isOpen, isInitialized, initializeChatbot]);
 
   const handleSendMessage = async (messageText?: string) => {
     const textToSend = messageText || inputText.trim();
@@ -127,7 +137,7 @@ export function FitnessCoachChatbot({
         })
       });
 
-      const data = await response.json();
+      const data: ChatResponse = await response.json();
 
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),

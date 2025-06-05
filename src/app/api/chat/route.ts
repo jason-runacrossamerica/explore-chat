@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FitnessCoachAI, ChatMessage } from '@/services/openai';
 
+interface ChatRequestBody {
+  message?: string;
+  conversationHistory?: ChatMessage[];
+  userId?: string;
+  projectId?: string;
+  type?: 'message' | 'greeting';
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body: ChatRequestBody = await request.json();
     const {
       message,
       conversationHistory = [],
@@ -45,6 +53,14 @@ export async function POST(request: NextRequest) {
       // Generate a personalized greeting
       response = await coach.generateGreeting(userId, projectId);
     } else {
+      // Validate message for regular chat
+      if (!message) {
+        return NextResponse.json(
+          { error: 'Message is required for chat' },
+          { status: 400 }
+        );
+      }
+
       // Generate a response to the user's message
       response = await coach.generateResponse(
         message,

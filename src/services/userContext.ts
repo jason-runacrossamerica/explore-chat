@@ -54,7 +54,7 @@ export class UserContextService {
         throw new Error(`Failed to fetch user profile: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data: UserProfile = await response.json();
       console.log(`[UserContext] User profile data received:`, data);
       return data;
     } catch (error) {
@@ -80,7 +80,7 @@ export class UserContextService {
         throw new Error(`Failed to fetch project participant: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data: ProjectParticipant[] = await response.json();
       console.log(`[UserContext] Project participant data received:`, data);
       return data[0] || null;
     } catch (error) {
@@ -98,7 +98,7 @@ export class UserContextService {
         headers: { 'Content-Type': 'application/json' }
       });
       if (!response.ok) throw new Error('Failed to fetch season progress');
-      const data = await response.json();
+      const data: { total_distance?: number } = await response.json();
       return data.total_distance || 0;
     } catch (error) {
       console.error('Error fetching season progress:', error);
@@ -120,8 +120,8 @@ export class UserContextService {
           'Content-Type': 'application/json'
         },
         body: hasCohort ? JSON.stringify({
-          cohort_start_date: new Date(participant.cohort_start_date),
-          cohort_end_date: new Date(participant.cohort_end_date)
+          cohort_start_date: participant.cohort_start_date ? new Date(participant.cohort_start_date) : undefined,
+          cohort_end_date: participant.cohort_end_date ? new Date(participant.cohort_end_date) : undefined
         }) : undefined
       };
 
@@ -139,7 +139,7 @@ export class UserContextService {
     try {
       const response = await fetch(`${API_BASE}/projects/${projectId}/community-total`);
       if (!response.ok) throw new Error('Failed to fetch community total');
-      const data = await response.json();
+      const data: { total?: number } = await response.json();
       return data.total || 0;
     } catch (error) {
       console.error('Error fetching community total:', error);

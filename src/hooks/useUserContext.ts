@@ -25,29 +25,24 @@ export function useUserContext(propsUserId?: string, propsProjectId?: string): U
 
     console.log(`[useUserContext] URL search params:`, window.location.search);
     console.log(`[useUserContext] URL userId: ${urlUserId}, projectId: ${urlProjectId}`);
+    console.log(`[useUserContext] Props userId: ${propsUserId}, projectId: ${propsProjectId}`);
+    console.log(`[useUserContext] Env userId: ${process.env.NEXT_PUBLIC_DEFAULT_USER_ID}, projectId: ${process.env.NEXT_PUBLIC_DEFAULT_PROJECT_ID}`);
 
-    let userId: string;
-    let projectId: string;
+    // Prioritize URL parameters first, then props, then environment variables
+    const userId = urlUserId || propsUserId || process.env.NEXT_PUBLIC_DEFAULT_USER_ID || 'demo-user';
+    const projectId = urlProjectId || propsProjectId || process.env.NEXT_PUBLIC_DEFAULT_PROJECT_ID || 'demo-project';
+
+    // Determine the primary source based on what was actually used
     let source: 'url' | 'env' | 'props';
-
-    if (urlUserId && urlProjectId) {
-      // Use URL parameters if both are present
-      userId = urlUserId;
-      projectId = urlProjectId;
+    if (urlUserId || urlProjectId) {
       source = 'url';
-    } else if (propsUserId && propsProjectId) {
-      // Use props if provided
-      userId = propsUserId;
-      projectId = propsProjectId;
+    } else if (propsUserId || propsProjectId) {
       source = 'props';
     } else {
-      // Fall back to environment variables or defaults
-      userId = process.env.NEXT_PUBLIC_DEFAULT_USER_ID || 'demo-user';
-      projectId = process.env.NEXT_PUBLIC_DEFAULT_PROJECT_ID || 'demo-project';
       source = 'env';
     }
 
-    console.log(`[useUserContext] Setting context - userId: ${userId}, projectId: ${projectId}, source: ${source}`);
+    console.log(`[useUserContext] Final values - userId: ${userId} (from ${urlUserId ? 'URL' : propsUserId ? 'props' : 'env'}), projectId: ${projectId} (from ${urlProjectId ? 'URL' : propsProjectId ? 'props' : 'env'}), source: ${source}`);
     setUserContext({ userId, projectId, source });
   }, [propsUserId, propsProjectId]);
 

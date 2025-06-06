@@ -14,22 +14,21 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
   console.log(`[ChatPage] Server-side params - userId: ${userId}, projectId: ${projectId}`);
 
   return (
-    <div className="chat-page">
+    <div
+      className="chat-page"
+      style={{
+        height: '100vh',
+        width: '100vw',
+        overflow: 'hidden',
+        fontFamily: "'din-2014-narrow', 'Droid Sans', sans-serif"
+      }}
+    >
       {/* Full Page Chat Interface with server-extracted parameters */}
       <ChatInterface
         isFullPage={true}
         userId={userId}
         projectId={projectId}
       />
-
-      <style jsx>{`
-        .chat-page {
-          height: 100vh;
-          width: 100vw;
-          overflow: hidden;
-          font-family: 'din-2014-narrow', 'Droid Sans', sans-serif;
-        }
-      `}</style>
     </div>
   );
 }

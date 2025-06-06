@@ -20,9 +20,9 @@ export async function POST(request: NextRequest) {
       type = 'message' // 'message' or 'greeting'
     } = body;
 
-    console.log(`[Chat API] Request received - type: ${type}, userId: ${userId}, projectId: ${projectId}`);
-    if (type === 'message') {
-      console.log(`[Chat API] Message: ${message}`);
+    // Log only essential information
+    if (type === 'greeting') {
+      console.log(`[Chat API] Generating greeting for user: ${userId}`);
     }
 
     // Validate required fields for regular messages

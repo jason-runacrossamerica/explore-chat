@@ -9,11 +9,24 @@ export interface UserContextParams {
 }
 
 export function useUserContext(propsUserId?: string, propsProjectId?: string): UserContextParams {
-  const [userContext, setUserContext] = useState<UserContextParams>({
-    userId: propsUserId || process.env.NEXT_PUBLIC_DEFAULT_USER_ID || 'demo-user',
-    projectId: propsProjectId || process.env.NEXT_PUBLIC_DEFAULT_PROJECT_ID || 'demo-project',
-    source: 'props'
-  });
+  // Initialize with props if available, otherwise use environment defaults
+  const getInitialContext = (): UserContextParams => {
+    if (propsUserId && propsProjectId) {
+      return {
+        userId: propsUserId,
+        projectId: propsProjectId,
+        source: 'props'
+      };
+    }
+
+    return {
+      userId: process.env.NEXT_PUBLIC_DEFAULT_USER_ID || 'demo-user',
+      projectId: process.env.NEXT_PUBLIC_DEFAULT_PROJECT_ID || 'demo-project',
+      source: 'env'
+    };
+  };
+
+  const [userContext, setUserContext] = useState<UserContextParams>(getInitialContext);
 
   useEffect(() => {
     // Check if we're in the browser
@@ -23,34 +36,30 @@ export function useUserContext(propsUserId?: string, propsProjectId?: string): U
     const urlUserId = urlParams.get('user_id');
     const urlProjectId = urlParams.get('project_id');
 
-    console.log(`[useUserContext] URL search params:`, window.location.search);
-    console.log(`[useUserContext] URL userId: ${urlUserId}, projectId: ${urlProjectId}`);
-
     let userId: string;
     let projectId: string;
     let source: 'url' | 'env' | 'props';
 
+    // Priority: URL params > Props > Environment variables
     if (urlUserId && urlProjectId) {
-      // Use URL parameters if both are present
+      // Use URL parameters if both are present (highest priority)
       userId = urlUserId;
       projectId = urlProjectId;
       source = 'url';
     } else if (propsUserId && propsProjectId) {
-      // Use props if provided
+      // Use props if provided (medium priority)
       userId = propsUserId;
       projectId = propsProjectId;
       source = 'props';
     } else {
-      // Fall back to environment variables or defaults
+      // Fall back to environment variables or defaults (lowest priority)
       userId = process.env.NEXT_PUBLIC_DEFAULT_USER_ID || 'demo-user';
       projectId = process.env.NEXT_PUBLIC_DEFAULT_PROJECT_ID || 'demo-project';
       source = 'env';
     }
 
-    console.log(`[useUserContext] Setting context - userId: ${userId}, projectId: ${projectId}, source: ${source}`);
     setUserContext({ userId, projectId, source });
   }, [propsUserId, propsProjectId]);
 
-  console.log(`[useUserContext] Returning context:`, userContext);
   return userContext;
 }

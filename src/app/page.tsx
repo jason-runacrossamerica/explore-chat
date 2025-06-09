@@ -179,35 +179,64 @@ export default function Home() {
               }}>
                 Ready to start your fitness journey? Click the button below to chat with your personal fitness coach!
               </p>
-              <a
-                href="/chat"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  background: "linear-gradient(135deg, #dc2626, #ef4444)",
-                  color: "white",
-                  padding: "12px 24px",
-                  borderRadius: "8px",
-                  textDecoration: "none",
-                  fontFamily: "din-2014-narrow, sans-serif",
-                  fontWeight: 700,
-                  fontSize: "1.1rem",
-                  transition: "all 0.3s ease",
-                  boxShadow: "0 4px 16px rgba(220, 38, 38, 0.3)",
-                  marginBottom: "1rem"
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.transform = "translateY(-2px)";
-                  e.currentTarget.style.boxShadow = "0 6px 20px rgba(220, 38, 38, 0.4)";
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(220, 38, 38, 0.3)";
-                }}
-              >
-                💪 Start Chatting Now
-              </a>
+              <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", justifyContent: "center" }}>
+                <a
+                  href="/chat"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    background: "linear-gradient(135deg, #dc2626, #ef4444)",
+                    color: "white",
+                    padding: "12px 24px",
+                    borderRadius: "8px",
+                    textDecoration: "none",
+                    fontFamily: "din-2014-narrow, sans-serif",
+                    fontWeight: 700,
+                    fontSize: "1.1rem",
+                    transition: "all 0.3s ease",
+                    boxShadow: "0 4px 16px rgba(220, 38, 38, 0.3)",
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 6px 20px rgba(220, 38, 38, 0.4)";
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "0 4px 16px rgba(220, 38, 38, 0.3)";
+                  }}
+                >
+                  💪 Start Chatting Now
+                </a>
+                <a
+                  href="/activity-converter"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+                    color: "white",
+                    padding: "12px 24px",
+                    borderRadius: "8px",
+                    textDecoration: "none",
+                    fontFamily: "din-2014-narrow, sans-serif",
+                    fontWeight: 700,
+                    fontSize: "1.1rem",
+                    transition: "all 0.3s ease",
+                    boxShadow: "0 4px 16px rgba(59, 130, 246, 0.3)",
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 6px 20px rgba(59, 130, 246, 0.4)";
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "0 4px 16px rgba(59, 130, 246, 0.3)";
+                  }}
+                >
+                  📏 Activity Converter
+                </a>
+              </div>
               <p style={{
                 fontFamily: "Droid Sans, sans-serif",
                 color: "#dc2626",
@@ -215,7 +244,8 @@ export default function Home() {
                 background: "#fef2f2",
                 padding: "1rem",
                 borderRadius: "0.5rem",
-                border: "1px solid #fecaca"
+                border: "1px solid #fecaca",
+                marginTop: "1rem"
               }}>
                 <strong>Note:</strong> This is the UI demo. Add your OpenAI API key for intelligent responses!
               </p>
